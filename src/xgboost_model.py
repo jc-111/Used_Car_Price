@@ -1,8 +1,3 @@
-"""
-xgboost model module for vehicle price prediction
-implements xgboost regressor with hyperparameter tuning and evaluation
-"""
-
 import pandas as pd
 import numpy as np
 from xgboost import XGBRegressor
@@ -27,6 +22,7 @@ class XGBoostModel:
         args:
             random_state: random seed for reproducibility
         """
+
         self.random_state = random_state
         self.model = None
         self.is_trained = False
@@ -47,10 +43,9 @@ class XGBoostModel:
         returns:
             device string ('cuda' or 'cpu')
         """
+
         try:
-            # try to create xgboost with cuda
             test_model = XGBRegressor(device='cuda', n_estimators=1)
-            # if no error, gpu is available
             print("gpu detected, using cuda acceleration")
             return 'cuda'
         except:
@@ -69,6 +64,7 @@ class XGBoostModel:
         returns:
             tuple of (X_train, X_test, y_train, y_test)
         """
+
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=test_size, random_state=self.random_state
         )
@@ -84,13 +80,10 @@ class XGBoostModel:
             X_train: training features
             y_train: training target
         """
-        print("training xgboost with default parameters...")
 
-        # check gpu availability
         device = self.check_gpu_availability()
         self.default_params['device'] = device
 
-        # create and train model
         self.model = XGBRegressor(**self.default_params)
         self.model.fit(X_train, y_train)
         self.is_trained = True
@@ -109,33 +102,28 @@ class XGBoostModel:
         returns:
             best parameters dictionary
         """
-        print("starting hyperparameter tuning...")
 
-        # parameter grid for tuning
         param_grid = {
             'n_estimators': [100, 200, 300],
             'learning_rate': [0.05, 0.1, 0.15],
             'max_depth': [4, 6, 8],
         }
 
-        # base model for grid search
+        # base model
         base_model = XGBRegressor(
             tree_method='hist',
             device=self.check_gpu_availability(),
             random_state=self.random_state
         )
 
-        # grid search with cross validation
         grid_search = GridSearchCV(
             base_model, param_grid,
             cv=cv_folds, scoring='neg_mean_absolute_error',
             n_jobs=-1, verbose=1
         )
 
-        # fit grid search
         grid_search.fit(X_train, y_train)
 
-        # update model with best parameters
         self.model = grid_search.best_estimator_
         self.is_trained = True
 
@@ -154,6 +142,7 @@ class XGBoostModel:
         returns:
             dictionary with evaluation metrics
         """
+
         if not self.is_trained:
             raise ValueError("model must be trained before evaluation")
 
@@ -189,10 +178,10 @@ class XGBoostModel:
         returns:
             dataframe with feature importance
         """
+
         if not self.is_trained:
             raise ValueError("model must be trained before getting feature importance")
 
-        # create importance dataframe
         importance_df = pd.DataFrame({
             'feature': feature_names,
             'importance': self.model.feature_importances_
@@ -209,19 +198,17 @@ class XGBoostModel:
             importance_df: feature importance dataframe
             save_path: path to save plots
         """
-        # create results directory if not exists
         os.makedirs(save_path, exist_ok=True)
 
-        # create subplots
         fig, axes = plt.subplots(1, 3, figsize=(18, 5))
 
-        # 1. feature importance plot
+        # feature importance plot
         axes[0].barh(importance_df['feature'], importance_df['importance'])
         axes[0].set_xlabel('importance')
         axes[0].set_title(f'top {len(importance_df)} feature importance (xgboost)')
         axes[0].invert_yaxis()
 
-        # 2. predicted vs actual plot
+        # predicted vs actual plot
         y_test = metrics.get('y_test', [])
         y_pred = metrics['predictions']
 
@@ -233,7 +220,6 @@ class XGBoostModel:
             axes[1].set_ylabel('predicted price')
             axes[1].set_title('predicted vs actual prices')
 
-            # 3. residual plot
             residuals = y_test - y_pred
             axes[2].scatter(y_test, residuals, alpha=0.3)
             axes[2].axhline(0, color='red', linestyle='--')
@@ -254,10 +240,10 @@ class XGBoostModel:
         args:
             filepath: path to save model
         """
+
         if not self.is_trained:
             raise ValueError("model must be trained before saving")
 
-        # create models directory if not exists
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
 
         # save model
@@ -271,6 +257,7 @@ class XGBoostModel:
         args:
             filepath: path to model file
         """
+
         self.model = joblib.load(filepath)
         self.is_trained = True
         print(f"model loaded from {filepath}")
@@ -287,7 +274,6 @@ class XGBoostModel:
         returns:
             evaluation metrics dictionary
         """
-        print("starting xgboost training and evaluation...")
 
         # split data
         X_train, X_test, y_train, y_test = self.split_data(X, y)
@@ -312,10 +298,8 @@ class XGBoostModel:
 
         return metrics
 
-
-# example usage
 if __name__ == "__main__":
-    # test xgboost model
+
     from preprocessing import DataPreprocessor
     from feature_engineering import FeatureEngineer
 

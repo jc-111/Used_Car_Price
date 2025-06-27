@@ -1,8 +1,3 @@
-"""
-neural network model module for vehicle price prediction
-implements advanced mlp with multiple embeddings and multi-input architecture
-"""
-
 import pandas as pd
 import numpy as np
 import tensorflow as tf
@@ -21,11 +16,6 @@ warnings.filterwarnings('ignore')
 
 
 class NeuralNetworkModel:
-    """
-    advanced neural network model for vehicle price prediction
-    uses multi-input architecture with embeddings for high-cardinality features
-    """
-
     def __init__(self, random_state: int = 42):
         """
         initialize neural network model
@@ -38,14 +28,12 @@ class NeuralNetworkModel:
         self.history = None
         self.is_trained = False
 
-        # set random seeds for reproducibility
         tf.random.set_seed(random_state)
         np.random.seed(random_state)
 
-        # model architecture parameters
         self.embedding_dims = {
-            'model': 16,  # model has 20k+ categories
-            'region': 8  # region has 400+ categories
+            'model': 16,
+            'region': 8
         }
 
     def prepare_data(self, nn_features: Dict, y: pd.Series,
@@ -60,7 +48,7 @@ class NeuralNetworkModel:
         returns:
             tuple of train and test data
         """
-        # get indices for splitting
+
         indices = range(len(y))
         train_idx, test_idx = train_test_split(
             indices, test_size=test_size, random_state=self.random_state
@@ -113,21 +101,17 @@ class NeuralNetworkModel:
         returns:
             compiled keras model
         """
-        print("building multi-input neural network...")
 
-        # 1. numeric input branch
         numeric_input = Input(shape=(nn_features['numeric'].shape[1],), name='numeric')
         numeric_dense = Dense(64, activation='relu')(numeric_input)
         numeric_dense = BatchNormalization()(numeric_dense)
 
-        # 2. embedding input branches
         embedding_inputs = []
         embedding_outputs = []
 
         for col, vocab_size in embedding_vocab_sizes.items():
-            # embedding input
             embed_input = Input(shape=(1,), name=f'{col}_input')
-            # embedding layer with appropriate dimension
+
             embed_dim = self.embedding_dims.get(col, min(16, vocab_size // 4))
             embed_layer = Embedding(vocab_size, embed_dim, name=f'{col}_embed')(embed_input)
             embed_flat = Flatten()(embed_layer)
@@ -137,23 +121,19 @@ class NeuralNetworkModel:
 
             print(f"embedding {col}: vocab_size={vocab_size}, embed_dim={embed_dim}")
 
-        # 3. one-hot input branch
         onehot_input = Input(shape=(nn_features['onehot'].shape[1],), name='onehot')
         onehot_dense = Dense(64, activation='relu')(onehot_input)
         onehot_dense = BatchNormalization()(onehot_dense)
 
-        # 4. concatenate all branches
         all_inputs = [numeric_input] + embedding_inputs + [onehot_input]
         all_features = [numeric_dense] + embedding_outputs + [onehot_dense]
 
         concat = Concatenate()(all_features)
 
-        # 5. deep network with residual connections
         x = Dense(256, activation='relu')(concat)
         x = BatchNormalization()(x)
         x = Dropout(0.4)(x)
 
-        # residual block
         x1 = Dense(128, activation='relu')(x)
         x1 = BatchNormalization()(x1)
         x1 = Dropout(0.3)(x1)
@@ -161,23 +141,18 @@ class NeuralNetworkModel:
         x2 = Dense(128, activation='relu')(x1)
         x2 = BatchNormalization()(x2)
 
-        # skip connection (adjust dimensions)
         x_skip = Dense(128)(x)
         x_res = Add()([x2, x_skip])
         x_res = Dropout(0.3)(x_res)
 
-        # final layers
         x_final = Dense(64, activation='relu')(x_res)
         x_final = BatchNormalization()(x_final)
         x_final = Dropout(0.2)(x_final)
 
-        # output layer
         output = Dense(1, name='price')(x_final)
 
-        # create model
         model = Model(inputs=all_inputs, outputs=output)
 
-        # compile model
         model.compile(
             optimizer=Adam(learning_rate=0.001),
             loss='mse',
@@ -198,15 +173,12 @@ class NeuralNetworkModel:
             batch_size: batch size for training
             validation_split: validation data proportion
         """
-        print("training neural network model...")
 
-        # prepare training data
         train_data = data['train']
         train_inputs = [train_data['numeric']] + \
                        list(train_data['embedding'].values()) + \
                        [train_data['onehot']]
 
-        # callbacks for training
         callbacks = [
             EarlyStopping(
                 monitor='val_loss',
@@ -246,16 +218,15 @@ class NeuralNetworkModel:
         returns:
             dictionary with evaluation metrics
         """
+
         if not self.is_trained:
             raise ValueError("model must be trained before evaluation")
 
-        # prepare test data
         test_data = data['test']
         test_inputs = [test_data['numeric']] + \
                       list(test_data['embedding'].values()) + \
                       [test_data['onehot']]
 
-        # make predictions
         y_pred = self.model.predict(test_inputs).flatten()
         y_test = test_data['target']
 
@@ -272,7 +243,7 @@ class NeuralNetworkModel:
             'y_test': y_test
         }
 
-        print(f"\n🚀 neural network model performance:")
+        print(f"\n neural network model performance:")
         print(f"mae: ${mae:,.2f}")
         print(f"rmse: ${rmse:,.2f}")
         print(f"r²: {r2:.4f}")
@@ -286,13 +257,12 @@ class NeuralNetworkModel:
         args:
             save_path: path to save plots
         """
+
         if self.history is None:
             raise ValueError("model must be trained before visualization")
 
-        # create results directory
         os.makedirs(save_path, exist_ok=True)
 
-        # plot training history
         plt.figure(figsize=(12, 4))
 
         # loss plot
@@ -325,13 +295,12 @@ class NeuralNetworkModel:
             metrics: evaluation metrics dictionary
             save_path: path to save plots
         """
-        # create results directory
+
         os.makedirs(save_path, exist_ok=True)
 
         y_test = metrics['y_test']
         y_pred = metrics['predictions']
 
-        # create plots
         plt.figure(figsize=(12, 4))
 
         # predicted vs actual
@@ -364,13 +333,12 @@ class NeuralNetworkModel:
         args:
             filepath: path to save model
         """
+
         if not self.is_trained:
             raise ValueError("model must be trained before saving")
 
-        # create models directory
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
 
-        # save model
         self.model.save(filepath)
         print(f"model saved to {filepath}")
 
@@ -397,9 +365,7 @@ class NeuralNetworkModel:
         returns:
             evaluation metrics dictionary
         """
-        print("starting neural network training and evaluation...")
 
-        # prepare data
         data = self.prepare_data(nn_features, y)
 
         # build model
@@ -421,14 +387,10 @@ class NeuralNetworkModel:
         print("neural network pipeline completed!")
         return metrics
 
-
-# example usage
 if __name__ == "__main__":
-    # test neural network model
     from preprocessing import DataPreprocessor
     from feature_engineering import FeatureEngineer
 
-    # load and preprocess data
     preprocessor = DataPreprocessor()
     df = preprocessor.preprocess("../data/vehicles.csv")
 

@@ -1,8 +1,3 @@
-"""
-feature engineering module for vehicle price prediction
-handles encoding, scaling, and feature selection for different model types
-"""
-
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler, OneHotEncoder, LabelEncoder
@@ -11,17 +6,11 @@ import warnings
 warnings.filterwarnings('ignore')
 
 class FeatureEngineer:
-   """
-   feature engineering for vehicle price prediction
-   creates different feature sets for xgboost and neural network models
-   """
-
    def __init__(self):
-       """initialize feature engineer with encoding strategies"""
-       # columns to drop due to high missing rate (>50%)
+
+       # drop columns with high missing rate (>50%)
        self.high_missing_cols = ['cylinders', 'condition']
 
-       # features for different encoding strategies
        self.numeric_cols = ['year', 'car_age', 'odometer']
 
        # embedding features (high cardinality)
@@ -31,10 +20,8 @@ class FeatureEngineer:
        self.onehot_cols = ['manufacturer', 'fuel', 'transmission', 'drive',
                           'type', 'paint_color', 'state']  # state: 51 unique
 
-       # keep features with manageable missing rates
-       self.keep_cols = ['drive', 'paint_color', 'type']  # <40% missing, useful
+       self.keep_cols = ['drive', 'paint_color', 'type']
 
-       # store encoders
        self.encoders = {}
        self.scaler = StandardScaler()
 
@@ -47,6 +34,7 @@ class FeatureEngineer:
        returns:
            dataframe with high missing columns removed
        """
+
        cols_to_drop = [col for col in self.high_missing_cols if col in df.columns]
        df = df.drop(columns=cols_to_drop)
        print(f"dropped {len(cols_to_drop)} high missing columns: {cols_to_drop}")
@@ -72,7 +60,6 @@ class FeatureEngineer:
                    df[col] = df[col].fillna('unknown')
                    print(f"filled {missing_count} missing values in {col}")
 
-       # drop remaining rows with missing numeric values
        numeric_missing = df[self.numeric_cols].isnull().sum().sum()
        if numeric_missing > 0:
            df = df.dropna(subset=self.numeric_cols)
@@ -89,17 +76,15 @@ class FeatureEngineer:
        returns:
            dataframe with label encoded features for xgboost
        """
-       print("creating xgboost features...")
+
        X_xgb = df.copy()
 
-       # remove non-feature columns (id, posting_date, any remaining object columns)
        non_feature_cols = ['id', 'posting_date', 'VIN']
        for col in non_feature_cols:
            if col in X_xgb.columns:
                X_xgb = X_xgb.drop(columns=[col])
                print(f"dropped non-feature column: {col}")
 
-       # identify columns to encode
        categorical_cols = self.embedding_cols + self.onehot_cols
 
        # label encode all categorical features for xgboost
@@ -107,9 +92,7 @@ class FeatureEngineer:
            if col in X_xgb.columns:
                le = LabelEncoder()
                X_xgb[f'{col}_encoded'] = le.fit_transform(X_xgb[col].astype(str))
-               # store encoder for later use
                self.encoders[f'{col}_xgb'] = le
-               # drop original column
                X_xgb = X_xgb.drop(columns=[col])
 
        # ensure only numeric columns remain
@@ -176,22 +159,18 @@ class FeatureEngineer:
        returns:
            dictionary with features for both model types
        """
-       print("starting feature engineering...")
 
-       # 1. drop high missing columns
+       # drop high missing columns
        df_clean = self.drop_high_missing_columns(df)
 
-       # 2. handle remaining missing values
        df_clean = self.handle_remaining_missing(df_clean)
 
-       # 3. create xgboost features
+       # create xgboost features
        X_xgb = self.create_xgboost_features(df_clean)
-
-       # 4. use all xgboost features (already optimized and few in number)
        X_xgb_selected = X_xgb
        print(f"using all {X_xgb.shape[1]} features for xgboost (no selection needed)")
 
-       # 5. create neural network features
+       # create neural network features
        nn_features = self.create_neural_network_features(df_clean)
 
        print("feature engineering completed!")
@@ -205,14 +184,11 @@ class FeatureEngineer:
            'target': y
        }
 
-# example usage
 if __name__ == "__main__":
     from preprocessing import DataPreprocessor
 
-    # load and preprocess data
     preprocessor = DataPreprocessor()
     df = preprocessor.preprocess("../data/vehicles.csv")
 
-    # engineer features
     engineer = FeatureEngineer()
     features = engineer.engineer_features(df.drop('price', axis=1), df['price'])

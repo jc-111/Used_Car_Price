@@ -1,8 +1,3 @@
-"""
-main execution script for vehicle price prediction project
-runs complete pipeline: preprocessing -> feature engineering -> model training -> comparison
-"""
-
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -29,16 +24,13 @@ def load_and_prepare_data():
    print("STEP 1: Data Preprocessing")
    print("=" * 60)
 
-   # initialize preprocessor
    preprocessor = DataPreprocessor()
 
-   # load and preprocess data
    df_clean = preprocessor.preprocess("data/vehicles.csv")
 
    print("STEP 2: Feature Engineering")
    print("=" * 60)
 
-   # initialize feature engineer
    engineer = FeatureEngineer()
 
    X = df_clean.drop('price', axis=1)
@@ -57,6 +49,7 @@ def train_xgboost_model(features):
    returns:
        xgboost metrics dictionary
    """
+
    print("STEP 3: XGBoost Model Training")
    print("=" * 60)
 
@@ -148,6 +141,7 @@ def create_comparison_plots(xgb_metrics, nn_metrics):
        xgb_metrics: xgboost evaluation metrics
        nn_metrics: neural network evaluation metrics
    """
+
    fig, axes = plt.subplots(2, 2, figsize=(15, 12))
 
    # metrics comparison
@@ -208,20 +202,17 @@ def create_comparison_plots(xgb_metrics, nn_metrics):
    plt.savefig('results/model_comparison.png', dpi=300, bbox_inches='tight')
 
 def main():
-   """main execution function"""
    try:
        create_directories()
-
-       # step 1 & 2: data loading and preprocessing
        features = load_and_prepare_data()
 
-       # step 3: train xgboost model
+       # train xgboost model
        xgb_metrics, xgb_model = train_xgboost_model(features)
 
-       # step 4: train neural network model
+       # train neural network model
        nn_metrics, nn_model = train_neural_network_model(features)
 
-       # step 5: compare models
+       # compare models
        compare_models(xgb_metrics, nn_metrics)
 
    except Exception as e:

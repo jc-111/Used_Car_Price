@@ -1,20 +1,9 @@
-"""
-data preprocessing module for vehicle price prediction
-handles data cleaning, outlier removal, and missing value treatment
-"""
-
 import pandas as pd
 import numpy as np
 from typing import Tuple
 
 class DataPreprocessor:
-   """
-   preprocesses raw vehicle data for machine learning models
-   removes unnecessary columns, handles missing values, filters outliers
-   """
-
    def __init__(self):
-       """initialize preprocessor with default parameters"""
        self.columns_to_drop = [
            'url', 'region_url', 'vin', 'image_url', 'description',
            'county', 'size', 'lat', 'long', 'title_status'
@@ -47,6 +36,7 @@ class DataPreprocessor:
        returns:
            dataframe with columns removed
        """
+
        # only drop columns that exist
        cols_to_drop = [col for col in self.columns_to_drop if col in df.columns]
        df = df.drop(columns=cols_to_drop, errors='ignore')
@@ -62,6 +52,7 @@ class DataPreprocessor:
        returns:
            dataframe with datetime conversion and car_age column
        """
+
        if 'posting_date' in df.columns:
            df['posting_date'] = pd.to_datetime(df['posting_date'], errors='coerce', utc=True)
            df['car_age'] = df['posting_date'].dt.year - df['year']
@@ -104,6 +95,7 @@ class DataPreprocessor:
            dataframe with missing values handled
        """
        # drop rows with missing critical values
+
        df = df.copy()
 
        critical_cols = ['price', 'year', 'manufacturer', 'model', 'odometer']
@@ -150,10 +142,8 @@ class DataPreprocessor:
            cleaned and preprocessed dataframe
        """
 
-       # load data
        df = self.load_data(file_path)
 
-       # preprocessing steps
        df = self.remove_columns(df)
        df = self.convert_datetime(df)
        df = self.remove_outliers(df)
@@ -162,14 +152,12 @@ class DataPreprocessor:
        # reset index
        df = df.reset_index(drop=True)
 
-       # summary
        self.get_data_summary(df)
 
        print("preprocessing completed!")
        return df
 
-# example usage
 if __name__ == "__main__":
-   # test the preprocessor
+
    preprocessor = DataPreprocessor()
    df_clean = preprocessor.preprocess("../data/vehicles.csv")
