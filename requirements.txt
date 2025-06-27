@@ -1,0 +1,19 @@
+pandas
+numpy
+scikit-learn
+scipy
+matplotlib
+seaborn
+plotly
+tqdm
+joblib
+openpyxl
+pyarrow
+
+# Machine Learning Models
+xgboost
+lightgbm
+
+# Deep Learning
+tensorflow
+keras
