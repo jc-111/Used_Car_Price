@@ -202,21 +202,23 @@ def create_comparison_plots(xgb_metrics, nn_metrics):
    plt.savefig('results/model_comparison.png', dpi=300, bbox_inches='tight')
 
 def main():
-   try:
-       create_directories()
-       features = load_and_prepare_data()
+    try:
+        create_directories()
+        features = load_and_prepare_data()
 
-       # train xgboost model
-       xgb_metrics, xgb_model = train_xgboost_model(features)
+        # train xgboost model
+        xgb_metrics, xgb_model = train_xgboost_model(features)
+        xgb_model.save_model('models/xgboost_model.joblib')  # Save XGBoost
 
-       # train neural network model
-       nn_metrics, nn_model = train_neural_network_model(features)
+        # train neural network model
+        nn_metrics, nn_model = train_neural_network_model(features)
+        nn_model.save_model('models/neural_network_model.h5')  # Save NN
 
-       # compare models
-       compare_models(xgb_metrics, nn_metrics)
+        # compare models
+        compare_models(xgb_metrics, nn_metrics)
 
-   except Exception as e:
-       print(f"\nError occurred: {str(e)}")
+    except Exception as e:
+        print(f"\nError occurred: {str(e)}")
 
 if __name__ == "__main__":
    main()
