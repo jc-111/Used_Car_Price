@@ -81,11 +81,6 @@ data/
 *.csv
 *.parquet
 
-# Model files
-models/
-*.model
-*.joblib
-
 # Fake/test data
 fake_cars_for_prediction.csv
 fake_cars_for_validation.csv
