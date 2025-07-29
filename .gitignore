@@ -58,6 +58,10 @@ ENV/
 env.bak/
 venv.bak/
 
+# Virtual environments
+venv/
+price_analyzer/
+
 # IDE files
 .vscode/
 .idea/
@@ -84,34 +88,13 @@ models/
 *.model
 *.joblib
 
+# Fake/test data
+fake_cars_for_prediction.csv
+fake_cars_for_validation.csv
+
 # Logs
 logs/
 *.log
 
-# OS files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# TensorFlow/Keras
-*.h5
-*.hdf5
-saved_model/
-
-# MLflow
-mlruns/
-mlartifacts/
-
-# Temporary files
-tmp/
-temp/
-*.tmp
-
-# Plots and outputs
-plots/
-outputs/
-results/
+# Streamlit cache
+.streamlit/
