@@ -17,3 +17,7 @@ lightgbm
 # Deep Learning
 tensorflow
 keras
+
+# UI and Data Generation
+streamlit
+faker
