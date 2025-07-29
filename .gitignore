@@ -80,8 +80,6 @@ ipython_config.py
 data/
 *.csv
 *.parquet
-*.pkl
-*.h5
 
 # Model files
 models/
