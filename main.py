@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+import joblib
 from src.preprocessing import DataPreprocessor
 from src.feature_engineering import FeatureEngineer
 from src.xgboost_model import XGBoostModel
@@ -37,6 +38,9 @@ def load_and_prepare_data():
    y = df_clean['price']
 
    features = engineer.engineer_features(X, y)
+
+   # Save the fitted encoder for future use
+   joblib.dump(preprocessor.encoder, "models/onehot_encoder.joblib")
 
    return features
 

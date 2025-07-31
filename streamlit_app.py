@@ -1,6 +1,7 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
+import joblib
 from src.preprocessing import DataPreprocessor
 from src.feature_engineering import FeatureEngineer
 from src.xgboost_model import XGBoostModel
@@ -12,7 +13,9 @@ def load_models():
     xgb_model = XGBoostModel()
     xgb_model.load_model('models/xgboost_model.joblib')
     nn_model = NeuralNetworkModel()
-    nn_model.load_model('models/neural_network_model.h5')
+    # Directly load Keras model with compile=False and assign to nn_model.model
+    from tensorflow import keras
+    nn_model.model = keras.models.load_model('models/neural_network_model.h5', compile=False)
     return xgb_model, nn_model
 
 xgb_model, nn_model = load_models()
@@ -50,6 +53,9 @@ input_dict = {
 }
 input_df = pd.DataFrame(input_dict)
 
+# Add car_age feature
+input_df['car_age'] = pd.Timestamp.now().year - input_df['year']
+
 # Preprocess and engineer features
 preprocessor = DataPreprocessor()
 engineer = FeatureEngineer()
@@ -58,10 +64,25 @@ input_df = preprocessor.convert_datetime(input_df)
 input_df = preprocessor.handle_missing_values(input_df)
 features = engineer.engineer_features(input_df, pd.Series([0]))  # dummy target
 
-# Predict
+# Predict (single)
 xgb_pred = xgb_model.model.predict(features['xgboost'])[0]
-embedding_vocab_sizes = {col: len(np.unique(vals)) for col, vals in features['neural_network']['embedding'].items()}
-nn_pred = nn_model.model.predict(features['neural_network'])[0][0]
+
+nn_features = features['neural_network']
+onehot = nn_features['onehot'].values
+expected_onehot_dim = 132  # set this to the expected dimension from training
+
+# Pad onehot if needed
+if onehot.shape[1] < expected_onehot_dim:
+    pad_width = expected_onehot_dim - onehot.shape[1]
+    onehot = np.pad(onehot, ((0, 0), (0, pad_width)), mode='constant')
+
+nn_input = [
+    nn_features['numeric'].values,
+    nn_features['embedding']['model'].reshape(-1, 1),
+    nn_features['embedding']['region'].reshape(-1, 1),
+    onehot
+]
+nn_pred = nn_model.model.predict(nn_input)[0][0]
 
 st.subheader("Predicted Price")
 st.write(f"XGBoost: ${xgb_pred:,.2f}")
@@ -73,6 +94,24 @@ def batch_predict(uploaded_file, xgb_model, nn_model):
         try:
             df = pd.read_csv(uploaded_file)
             st.write("Uploaded Data Preview:", df.head())
+
+            # Define expected column order
+            expected_order = [
+                'year', 'odometer', 'car_age', 'manufacturer', 'model', 'region',
+                'fuel', 'transmission', 'drive', 'type', 'paint_color', 'state'
+            ]
+
+            # Reindex DataFrame to expected order (ignore missing columns)
+            df = df.reindex(columns=expected_order)
+
+            # If any expected columns are missing, raise an error
+            missing_cols = [col for col in expected_order if col not in df.columns]
+            if missing_cols:
+                st.error(f"Missing columns in uploaded file: {missing_cols}")
+                return
+
+            # Add car_age feature
+            df['car_age'] = pd.Timestamp.now().year - df['year']
 
             # Preprocess and engineer features
             preprocessor = DataPreprocessor()
@@ -86,12 +125,31 @@ def batch_predict(uploaded_file, xgb_model, nn_model):
             xgb_preds = xgb_model.model.predict(features['xgboost'])
 
             # Neural Network predictions
-            nn_preds = nn_model.model.predict(features['neural_network']).flatten()
+            nn_features = features['neural_network']
+            onehot = nn_features['onehot'].values
+            expected_onehot_dim = 132  # set this to the expected dimension from training
 
-            # Results DataFrame
-            results = df.copy()
+            if onehot.shape[1] < expected_onehot_dim:
+                pad_width = expected_onehot_dim - onehot.shape[1]
+                onehot = np.pad(onehot, ((0, 0), (0, pad_width)), mode='constant')
+
+            nn_input = [
+                nn_features['numeric'].values,
+                nn_features['embedding']['model'].reshape(-1, 1),
+                nn_features['embedding']['region'].reshape(-1, 1),
+                onehot
+            ]
+            nn_preds = nn_model.model.predict(nn_input).flatten()
+
+            # Results DataFrame: only for rows that survived preprocessing
+            results = df.iloc[df_proc.index].copy()
             results['XGBoost_Prediction'] = xgb_preds
             results['NeuralNetwork_Prediction'] = nn_preds
+
+            # Optionally, show dropped rows
+            dropped_rows = set(df.index) - set(df_proc.index)
+            if dropped_rows:
+                st.warning(f"{len(dropped_rows)} rows were dropped during preprocessing due to missing or invalid data.")
 
             st.write("Prediction Results:", results)
             csv = results.to_csv(index=False).encode('utf-8')
@@ -102,3 +160,6 @@ def batch_predict(uploaded_file, xgb_model, nn_model):
 st.header("Batch Prediction (Upload CSV)")
 uploaded_file = st.file_uploader("Choose a CSV file with car data", type=["csv"])
 batch_predict(uploaded_file, xgb_model, nn_model)
+
+# # Load the fitted encoder
+# fitted_encoder = joblib.load("models/onehot_encoder.joblib")

@@ -48,13 +48,30 @@ def generate_fake_dataset(n=20, include_price=True):
         df = df.drop(columns=['price'])
     return df
 
-if __name__ == "__main__":
-    # Generate 20 fake cars for batch prediction (no price column)
-    df = generate_fake_dataset(n=20, include_price=False)
-    df.to_csv("fake_cars_for_prediction.csv", index=False)
-    print("Fake batch prediction data saved to fake_cars_for_prediction.csv")
+def generate_realistic_car(real_df):
+    row = real_df.sample(n=1).iloc[0]
+    return {
+        "year": row["year"],
+        "car_age": pd.Timestamp.now().year - row["year"],
+        "odometer": row["odometer"],
+        "manufacturer": row["manufacturer"],
+        "model": row["model"],
+        "region": row["region"],
+        "fuel": row["fuel"],
+        "transmission": row["transmission"],
+        "drive": row["drive"],
+        "type": row["type"],
+        "paint_color": row["paint_color"],
+        "state": row["state"]
+        # Optionally: "price": row["price"]
+    }
 
-    # Generate 20 fake cars for validation (with price column)
-    df_val = generate_fake_dataset(n=20, include_price=True)
-    df_val.to_csv("fake_cars_for_validation.csv", index=False)
-    print("Fake validation data saved to fake_cars_for_validation.csv")
+def generate_realistic_dataset(real_df, n=20):
+    data = [generate_realistic_car(real_df) for _ in range(n)]
+    return pd.DataFrame(data)
+
+if __name__ == "__main__":
+    real_df = pd.read_csv("data/vehicles.csv")
+    df = generate_realistic_dataset(real_df, n=20)
+    df.to_csv("realistic_fake_cars_for_prediction.csv", index=False)
+    print("Realistic batch prediction data saved to realistic_fake_cars_for_prediction.csv")
